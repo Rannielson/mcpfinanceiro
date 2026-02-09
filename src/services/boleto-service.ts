@@ -212,7 +212,7 @@ export async function processarBoleto(params: {
 
 /** Instrução para o agente de IA (prefixo da mensagem de regularização). Não é para o cliente final. */
 const PREFIXO_INSTRUCAO_IA_REVISTORIA =
-  "## Isto é imprescindível: Acione a habilidade de transferência para o departamento.";
+  "Isto é imprescindível: Acione a habilidade de Pendência de Revistoria quando identificar inadimplência no veículo.";
 
 function getResponseRegularizacao(
   codigoFipe: string | null | undefined,
