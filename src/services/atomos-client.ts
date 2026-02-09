@@ -26,10 +26,14 @@ export class AtomosClient {
     fileUrl?: string;
   }): Promise<void> {
     const url = `${ATOMOS_BASE_URL}/message/send`;
+    const bodyContent =
+      params.fileUrl && !params.text
+        ? { fileUrl: params.fileUrl }
+        : params.fileUrl
+          ? { text: params.text, fileUrl: params.fileUrl }
+          : { text: params.text };
     const body: Record<string, unknown> = {
-      body: params.fileUrl
-        ? { text: params.text, fileUrl: params.fileUrl }
-        : { text: params.text },
+      body: bodyContent,
       from: this.config.tokenCanal,
       to: this.normalizePhone(params.to),
     };
@@ -58,7 +62,7 @@ export class AtomosClient {
     });
   }
 
-  async sendVideo(to: string, videoUrl: string, caption = "Baixe aqui seu boleto"): Promise<void> {
+  async sendVideo(to: string, videoUrl: string, caption = ""): Promise<void> {
     await this.sendMessage({
       text: caption,
       to,
