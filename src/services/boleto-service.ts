@@ -210,13 +210,18 @@ export async function processarBoleto(params: {
   );
 }
 
+/** Instrução para o agente de IA (prefixo da mensagem de regularização). Não é para o cliente final. */
+const PREFIXO_INSTRUCAO_IA_REVISTORIA =
+  "## Isto é imprescindível: Acione a habilidade de transferência para o departamento.";
+
 function getResponseRegularizacao(
   codigoFipe: string | null | undefined,
   respostas: ClienteComConfigs["configuracoes_respostas"]
 ): string {
-  return isMotocicleta(codigoFipe)
+  const mensagem = isMotocicleta(codigoFipe)
     ? respostas.response_regularizacao_moto
     : respostas.response_regularizacao_veiculo;
+  return `${PREFIXO_INSTRUCAO_IA_REVISTORIA}\n\n${mensagem}`;
 }
 
 function enviarVideoRegularizacaoSeConfigurado(
