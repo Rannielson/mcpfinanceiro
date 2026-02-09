@@ -46,8 +46,9 @@ export interface ClienteComConfigs {
   configuracoes_boleto: {
     dias_antes_vencimento: number;
     dias_depois_vencimento: number;
-    situacoes_permitidas_envio: string[];
-    dias_inadimplente_permitido: number;
+    situacoes_envio_direto: string[];
+    situacoes_com_checagem_vencimento: string[];
+    dias_checagem_vencimento: number;
   };
   configuracoes_respostas: {
     response_sucesso: string;
@@ -102,8 +103,9 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
     configuracoes_boleto: {
       dias_antes_vencimento: cfgBoleto.dias_antes_vencimento,
       dias_depois_vencimento: cfgBoleto.dias_depois_vencimento,
-      situacoes_permitidas_envio: cfgBoleto.situacoes_permitidas_envio ?? ["ATIVO"],
-      dias_inadimplente_permitido: cfgBoleto.dias_inadimplente_permitido,
+      situacoes_envio_direto: cfgBoleto.situacoes_envio_direto ?? ["ATIVO"],
+      situacoes_com_checagem_vencimento: cfgBoleto.situacoes_com_checagem_vencimento ?? ["INADIMPLENTE"],
+      dias_checagem_vencimento: cfgBoleto.dias_checagem_vencimento ?? 2,
     },
     configuracoes_respostas: {
       response_sucesso: cfgRespostas.response_sucesso,
@@ -214,24 +216,25 @@ function processarBoletoEncontrado(
     return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
   }
 
-  const situacoesPermitidas =
-    cliente.configuracoes_boleto.situacoes_permitidas_envio ?? ["ATIVO"];
+  const situacoesEnvioDireto =
+    cliente.configuracoes_boleto.situacoes_envio_direto ?? ["ATIVO"];
+  const situacoesComChecagem =
+    cliente.configuracoes_boleto.situacoes_com_checagem_vencimento ?? ["INADIMPLENTE"];
   const veiculo = boleto.veiculos?.[0];
   const situacaoVeiculo = veiculo?.situacao_veiculo ?? "";
   const codigoFipe = veiculo?.codigo_fipe;
 
-  const permitido = situacoesPermitidas.includes(situacaoVeiculo);
+  const envioDireto = situacoesEnvioDireto.includes(situacaoVeiculo);
+  const comChecagem = situacoesComChecagem.includes(situacaoVeiculo);
 
-  if (situacaoVeiculo === "INADIMPLENTE" && permitido) {
+  if (comChecagem) {
     const dataVenc = parseDateBR(boleto.data_vencimento);
     const diasAposVenc = diffDays(new Date(), dataVenc);
-    const limite = cliente.configuracoes_boleto.dias_inadimplente_permitido;
+    const limite = cliente.configuracoes_boleto.dias_checagem_vencimento ?? 2;
     if (diasAposVenc > limite) {
       return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
     }
-  }
-
-  if (!permitido) {
+  } else if (!envioDireto) {
     return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
   }
 
@@ -259,12 +262,16 @@ function processarVeiculoSemBoleto(
   cliente: ClienteComConfigs,
   atomos: AtomosClient
 ): string {
-  const situacoesPermitidas =
-    cliente.configuracoes_boleto.situacoes_permitidas_envio ?? ["ATIVO"];
+  const situacoesEnvioDireto =
+    cliente.configuracoes_boleto.situacoes_envio_direto ?? ["ATIVO"];
+  const situacoesComChecagem =
+    cliente.configuracoes_boleto.situacoes_com_checagem_vencimento ?? [];
   const descricaoSituacao = veiculo.descricao_situacao ?? "";
   const codigoFipe = veiculo.codigo_fipe;
 
-  const permitido = situacoesPermitidas.includes(descricaoSituacao);
+  const permitido =
+    situacoesEnvioDireto.includes(descricaoSituacao) ||
+    situacoesComChecagem.includes(descricaoSituacao);
 
   if (permitido && cliente.configuracoes_revistoria.enviar_midia) {
     const videoUrl = isMotocicleta(codigoFipe)

@@ -59,8 +59,9 @@ Cadastra um cliente com todas as configurações em uma única chamada.
   "configuracoes_boleto": {
     "dias_antes_vencimento": 15,
     "dias_depois_vencimento": 5,
-    "situacoes_permitidas_envio": ["ATIVO"],
-    "dias_inadimplente_permitido": 2
+    "situacoes_envio_direto": ["ATIVO"],
+    "situacoes_com_checagem_vencimento": ["INADIMPLENTE"],
+    "dias_checagem_vencimento": 2
   },
   "configuracoes_respostas": {
     "response_sucesso": "Boleto e pix enviados! Vencimento: {{ data_vencimento }} Valor: {{ valor_boleto }}",

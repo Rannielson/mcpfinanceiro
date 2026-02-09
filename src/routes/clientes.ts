@@ -41,8 +41,9 @@ clientesRoutes.post(
         cliente_id: clienteId,
         dias_antes_vencimento: body.configuracoes_boleto.dias_antes_vencimento,
         dias_depois_vencimento: body.configuracoes_boleto.dias_depois_vencimento,
-        situacoes_permitidas_envio: body.configuracoes_boleto.situacoes_permitidas_envio,
-        dias_inadimplente_permitido: body.configuracoes_boleto.dias_inadimplente_permitido,
+        situacoes_envio_direto: body.configuracoes_boleto.situacoes_envio_direto,
+        situacoes_com_checagem_vencimento: body.configuracoes_boleto.situacoes_com_checagem_vencimento,
+        dias_checagem_vencimento: body.configuracoes_boleto.dias_checagem_vencimento,
       });
 
     if (boletoError) {

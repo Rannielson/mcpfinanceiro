@@ -3,8 +3,9 @@ import { z } from "zod";
 const configuracoesBoletoBase = z.object({
   dias_antes_vencimento: z.number().int().min(0).max(30),
   dias_depois_vencimento: z.number().int().min(0).max(30),
-  situacoes_permitidas_envio: z.array(z.string()).min(1),
-  dias_inadimplente_permitido: z.number().int().min(0),
+  situacoes_envio_direto: z.array(z.string()).min(1),
+  situacoes_com_checagem_vencimento: z.array(z.string()),
+  dias_checagem_vencimento: z.number().int().min(0),
 });
 
 const configuracoesBoletoSchema = configuracoesBoletoBase.refine(
