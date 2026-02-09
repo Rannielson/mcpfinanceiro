@@ -219,6 +219,21 @@ function getResponseRegularizacao(
     : respostas.response_regularizacao_veiculo;
 }
 
+function enviarVideoRegularizacaoSeConfigurado(
+  telefone: string,
+  codigoFipe: string | null | undefined,
+  cliente: ClienteComConfigs,
+  atomos: AtomosClient
+): void {
+  if (!cliente.configuracoes_revistoria.enviar_midia) return;
+  const videoUrl = isMotocicleta(codigoFipe)
+    ? cliente.configuracoes_revistoria.video_moto
+    : cliente.configuracoes_revistoria.video_carro;
+  if (videoUrl) {
+    atomos.sendVideo(telefone, videoUrl).catch(() => {});
+  }
+}
+
 function processarBoletoEncontrado(
   boleto: SGABoleto,
   telefone: string,
@@ -231,6 +246,7 @@ function processarBoletoEncontrado(
 
   if (boleto.situacao_boleto !== "ABERTO") {
     const codigoFipe = boleto.veiculos?.[0]?.codigo_fipe;
+    enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
     return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
   }
 
@@ -249,9 +265,11 @@ function processarBoletoEncontrado(
     const diasAposVenc = diasAposVencimento(boleto.data_vencimento);
     const limite = cliente.configuracoes_boleto.dias_checagem_vencimento ?? 2;
     if (diasAposVenc > limite) {
+      enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
       return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
     }
   } else if (!envioDireto) {
+    enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
     return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
   }
 

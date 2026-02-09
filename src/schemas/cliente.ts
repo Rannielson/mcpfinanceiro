@@ -1,16 +1,18 @@
 import { z } from "zod";
 
+const INTERVALO_MAX_DIAS = 50;
+
 const configuracoesBoletoBase = z.object({
-  dias_antes_vencimento: z.number().int().min(0).max(30),
-  dias_depois_vencimento: z.number().int().min(0).max(30),
+  dias_antes_vencimento: z.number().int().min(0).max(60),
+  dias_depois_vencimento: z.number().int().min(0).max(60),
   situacoes_envio_direto: z.array(z.string()).min(1),
   situacoes_com_checagem_vencimento: z.array(z.string()),
   dias_checagem_vencimento: z.number().int().min(0),
 });
 
 const configuracoesBoletoSchema = configuracoesBoletoBase.refine(
-  (data) => data.dias_antes_vencimento + data.dias_depois_vencimento <= 30,
-  { message: "Intervalo entre datas não pode superar 30 dias" }
+  (data) => data.dias_antes_vencimento + data.dias_depois_vencimento <= INTERVALO_MAX_DIAS,
+  { message: `Intervalo entre datas não pode superar ${INTERVALO_MAX_DIAS} dias` }
 );
 
 const configuracoesRespostasSchema = z.object({
@@ -52,11 +54,11 @@ export const patchConfiguracoesSchema = z.object({
     const antes = b.dias_antes_vencimento;
     const depois = b.dias_depois_vencimento;
     if (antes != null && depois != null) {
-      return antes + depois <= 30;
+      return antes + depois <= INTERVALO_MAX_DIAS;
     }
     return true;
   },
-  { message: "Intervalo entre datas não pode superar 30 dias" }
+  { message: `Intervalo entre datas não pode superar ${INTERVALO_MAX_DIAS} dias` }
 );
 
 export type PatchConfiguracoesInput = z.infer<typeof patchConfiguracoesSchema>;
