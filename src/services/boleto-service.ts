@@ -14,8 +14,13 @@ function formatDateBR(date: Date): string {
   return `${d}/${m}/${y}`;
 }
 
-function parseDateBR(str: string): Date {
-  const [d, m, y] = str.split("/").map(Number);
+function parseDate(str: string): Date {
+  const trimmed = str.trim();
+  if (trimmed.includes("-")) {
+    const [y, m, d] = trimmed.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const [d, m, y] = trimmed.split("/").map(Number);
   return new Date(y, m - 1, d);
 }
 
@@ -228,7 +233,7 @@ function processarBoletoEncontrado(
   const comChecagem = situacoesComChecagem.includes(situacaoVeiculo);
 
   if (comChecagem) {
-    const dataVenc = parseDateBR(boleto.data_vencimento);
+    const dataVenc = parseDate(boleto.data_vencimento);
     const diasAposVenc = diffDays(new Date(), dataVenc);
     const limite = cliente.configuracoes_boleto.dias_checagem_vencimento ?? 2;
     if (diasAposVenc > limite) {
