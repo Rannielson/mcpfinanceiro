@@ -17,16 +17,26 @@ function formatDateBR(date: Date): string {
 function parseDate(str: string): Date {
   const trimmed = str.trim();
   if (trimmed.includes("-")) {
-    const [y, m, d] = trimmed.split("-").map(Number);
-    return new Date(y, m - 1, d);
+    const parts = trimmed.split("-");
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]?.slice(0, 2) ?? 0);
+    return new Date(Date.UTC(y, m - 1, d));
   }
-  const [d, m, y] = trimmed.split("/").map(Number);
-  return new Date(y, m - 1, d);
+  const parts = trimmed.split("/");
+  const d = Number(parts[0]);
+  const m = Number(parts[1]);
+  const y = Number(parts[2]);
+  return new Date(Date.UTC(y, m - 1, d));
 }
 
-function diffDays(a: Date, b: Date): number {
-  const ms = a.getTime() - b.getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
+function diasAposVencimento(dataVencimentoStr: string): number {
+  const dataVenc = parseDate(dataVencimentoStr);
+  const hoje = new Date();
+  const hojeUTC = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()));
+  const vencUTC = new Date(Date.UTC(dataVenc.getUTCFullYear(), dataVenc.getUTCMonth(), dataVenc.getUTCDate()));
+  const ms = hojeUTC.getTime() - vencUTC.getTime();
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
 function replaceTemplate(
@@ -108,9 +118,9 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
     configuracoes_boleto: {
       dias_antes_vencimento: cfgBoleto.dias_antes_vencimento,
       dias_depois_vencimento: cfgBoleto.dias_depois_vencimento,
-      situacoes_envio_direto: cfgBoleto.situacoes_envio_direto ?? ["ATIVO"],
-      situacoes_com_checagem_vencimento: cfgBoleto.situacoes_com_checagem_vencimento ?? ["INADIMPLENTE"],
-      dias_checagem_vencimento: cfgBoleto.dias_checagem_vencimento ?? 2,
+      situacoes_envio_direto: Array.isArray(cfgBoleto.situacoes_envio_direto) ? cfgBoleto.situacoes_envio_direto : ["ATIVO"],
+      situacoes_com_checagem_vencimento: Array.isArray(cfgBoleto.situacoes_com_checagem_vencimento) ? cfgBoleto.situacoes_com_checagem_vencimento : ["INADIMPLENTE"],
+      dias_checagem_vencimento: Number(cfgBoleto.dias_checagem_vencimento) || 2,
     },
     configuracoes_respostas: {
       response_sucesso: cfgRespostas.response_sucesso,
@@ -226,15 +236,14 @@ function processarBoletoEncontrado(
   const situacoesComChecagem =
     cliente.configuracoes_boleto.situacoes_com_checagem_vencimento ?? ["INADIMPLENTE"];
   const veiculo = boleto.veiculos?.[0];
-  const situacaoVeiculo = veiculo?.situacao_veiculo ?? "";
+  const situacaoVeiculo = String(veiculo?.situacao_veiculo ?? "").trim();
   const codigoFipe = veiculo?.codigo_fipe;
 
-  const envioDireto = situacoesEnvioDireto.includes(situacaoVeiculo);
-  const comChecagem = situacoesComChecagem.includes(situacaoVeiculo);
+  const envioDireto = situacoesEnvioDireto.some((s) => String(s).trim() === situacaoVeiculo);
+  const comChecagem = situacoesComChecagem.some((s) => String(s).trim() === situacaoVeiculo);
 
   if (comChecagem) {
-    const dataVenc = parseDate(boleto.data_vencimento);
-    const diasAposVenc = diffDays(new Date(), dataVenc);
+    const diasAposVenc = diasAposVencimento(boleto.data_vencimento);
     const limite = cliente.configuracoes_boleto.dias_checagem_vencimento ?? 2;
     if (diasAposVenc > limite) {
       return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
