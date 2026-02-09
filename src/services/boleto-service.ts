@@ -180,8 +180,11 @@ export async function processarBoleto(params: {
   }
 
   if (boletos.length > 0) {
+    const boletosOrdenados = [...boletos].sort(
+      (a, b) => parseDate(a.data_vencimento).getTime() - parseDate(b.data_vencimento).getTime()
+    );
     return processarBoletoEncontrado(
-      boletos[0],
+      boletosOrdenados[0],
       params.telefone,
       cliente,
       atomos
