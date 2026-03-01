@@ -9,6 +9,79 @@ import {
 
 export const clientesRoutes = new Hono();
 
+clientesRoutes.get("/", async (c) => {
+  const { data: clientes, error } = await supabase
+    .from("clientes")
+    .select("id, nome, ativo, perfil_sistema, created_at")
+    .order("nome");
+
+  if (error) {
+    return c.json({ error: error.message }, 400);
+  }
+
+  const ids = (clientes ?? []).map((cl) => cl.id);
+  if (ids.length === 0) {
+    return c.json([]);
+  }
+
+  const { data: cfgs } = await supabase
+    .from("configuracoes_boleto")
+    .select("cliente_id, dias_antes_vencimento, dias_depois_vencimento, situacoes_envio_direto, situacoes_com_checagem_vencimento, dias_checagem_vencimento")
+    .in("cliente_id", ids);
+
+  const cfgMap = new Map((cfgs ?? []).map((cfg) => [cfg.cliente_id, cfg]));
+
+  const result = (clientes ?? []).map((cl) => ({
+    ...cl,
+    configuracoes_boleto: cfgMap.get(cl.id) ?? null,
+  }));
+
+  return c.json(result);
+});
+
+clientesRoutes.get(
+  "/:id",
+  zValidator("param", z.object({ id: z.string().uuid() })),
+  async (c) => {
+    const { id } = c.req.valid("param");
+
+    const { data: cliente, error: clienteError } = await supabase
+      .from("clientes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (clienteError || !cliente) {
+      return c.json({ error: "Cliente não encontrado" }, 404);
+    }
+
+    const { data: cfgBoleto } = await supabase
+      .from("configuracoes_boleto")
+      .select("*")
+      .eq("cliente_id", id)
+      .single();
+
+    const { data: cfgRespostas } = await supabase
+      .from("configuracoes_respostas")
+      .select("*")
+      .eq("cliente_id", id)
+      .single();
+
+    const { data: cfgRevistoria } = await supabase
+      .from("configuracoes_revistoria")
+      .select("*")
+      .eq("cliente_id", id)
+      .single();
+
+    return c.json({
+      ...cliente,
+      configuracoes_boleto: cfgBoleto ?? null,
+      configuracoes_respostas: cfgRespostas ?? null,
+      configuracoes_revistoria: cfgRevistoria ?? null,
+    });
+  }
+);
+
 clientesRoutes.post(
   "/",
   zValidator("json", createClienteSchema),

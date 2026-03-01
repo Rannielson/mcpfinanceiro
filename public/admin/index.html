@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Financeiro - Admin Clientes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 1.5rem; }
+    section { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+    section h2 { margin-top: 0; font-size: 1rem; }
+    .form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .form-row label { min-width: 160px; }
+    input[type="text"], input[type="url"], input[type="number"], textarea, select { flex: 1; min-width: 200px; padding: 0.4rem; }
+    textarea { min-height: 60px; resize: vertical; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    button { padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; }
+    button.primary { background: #0066cc; color: white; border: none; }
+    button.secondary { background: #eee; border: 1px solid #ccc; }
+    button:hover { opacity: 0.9; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f0f0f0; }
+    .msg { padding: 0.5rem; margin-bottom: 1rem; border-radius: 4px; }
+    .msg.success { background: #d4edda; color: #155724; }
+    .msg.error { background: #f8d7da; color: #721c24; }
+    .hidden { display: none; }
+    .id-cell { font-family: monospace; font-size: 0.8em; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    [type="checkbox"] { width: auto; min-width: auto; }
+    label.checkbox { display: flex; align-items: center; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>MCP Financeiro</h1>
+  <p class="subtitle">Cadastro e consulta de clientes</p>
+
+  <div id="msg" class="msg hidden"></div>
+
+  <section>
+    <h2>Novo cliente / Editar configurações</h2>
+    <form id="form" data-edit-id="">
+      <div class="form-row">
+        <label for="nome">Nome *</label>
+        <input type="text" id="nome" required placeholder="Nome do cliente">
+      </div>
+      <div class="form-row">
+        <label for="ativo">Ativo</label>
+        <label class="checkbox"><input type="checkbox" id="ativo" checked> Cliente ativo</label>
+      </div>
+      <div class="form-row">
+        <label for="token_erp">Token ERP (SGA) *</label>
+        <input type="text" id="token_erp" required placeholder="Token Hinova SGA">
+      </div>
+      <div class="form-row">
+        <label for="token_chat">Token Chat (Atomos) *</label>
+        <input type="text" id="token_chat" required placeholder="Token Chat Atomos">
+      </div>
+      <div class="form-row">
+        <label for="token_canal">Token Canal (Atomos) *</label>
+        <input type="text" id="token_canal" required placeholder="Token Canal Atomos">
+      </div>
+      <div class="form-row">
+        <label for="perfil_sistema">Perfil sistema</label>
+        <select id="perfil_sistema">
+          <option value="SGA">SGA</option>
+          <option value="SOUTH">SOUTH</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="base_url">Base URL SGA</label>
+        <input type="url" id="base_url" placeholder="https://api.hinova.com.br/api/sga/v2" value="https://api.hinova.com.br/api/sga/v2">
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Configurações Boleto</h3>
+      <div class="form-row">
+        <label for="dias_antes_vencimento">Dias antes vencimento *</label>
+        <input type="number" id="dias_antes_vencimento" min="0" max="60" value="30" required>
+      </div>
+      <div class="form-row">
+        <label for="dias_depois_vencimento">Dias depois vencimento *</label>
+        <input type="number" id="dias_depois_vencimento" min="0" max="60" value="20" required>
+      </div>
+      <div class="form-row">
+        <label for="situacoes_envio_direto">Situações envio direto *</label>
+        <textarea id="situacoes_envio_direto" placeholder="Ex: ATIVO (um por linha ou vírgula)">ATIVO</textarea>
+      </div>
+      <div class="form-row">
+        <label for="situacoes_com_checagem">Situações com checagem</label>
+        <textarea id="situacoes_com_checagem" placeholder="Ex: INADIMPLENTE">INADIMPLENTE</textarea>
+      </div>
+      <div class="form-row">
+        <label for="dias_checagem_vencimento">Dias checagem vencimento *</label>
+        <input type="number" id="dias_checagem_vencimento" min="0" value="5" required>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Mensagens de Resposta</h3>
+      <div class="form-row">
+        <label for="response_sucesso">Sucesso (boleto enviado) *</label>
+        <textarea id="response_sucesso" required placeholder="Use {{data_vencimento}} e {{valor_boleto}}">Boleto e pix enviados! Data: {{data_vencimento}}, Valor: {{valor_boleto}}</textarea>
+      </div>
+      <div class="form-row">
+        <label for="response_regularizacao_moto">Regularização moto *</label>
+        <textarea id="response_regularizacao_moto" required>Estamos enviando o vídeo modelo para regularização.</textarea>
+      </div>
+      <div class="form-row">
+        <label for="response_regularizacao_veiculo">Regularização veículo *</label>
+        <textarea id="response_regularizacao_veiculo" required>Estamos enviando o vídeo modelo para regularização.</textarea>
+      </div>
+      <div class="form-row">
+        <label for="response_boleto_baixado">Boleto baixado *</label>
+        <input type="text" id="response_boleto_baixado" required value="Boleto já foi baixado.">
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Revistoria</h3>
+      <div class="form-row">
+        <label for="enviar_midia">Enviar vídeo</label>
+        <label class="checkbox"><input type="checkbox" id="enviar_midia"> Enviar vídeo de regularização</label>
+      </div>
+      <div class="form-row">
+        <label for="video_moto">URL vídeo moto</label>
+        <input type="url" id="video_moto" placeholder="https://...">
+      </div>
+      <div class="form-row">
+        <label for="video_carro">URL vídeo carro</label>
+        <input type="url" id="video_carro" placeholder="https://...">
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="btnSubmit">Cadastrar</button>
+        <button type="button" class="secondary" id="btnCancelar">Cancelar / Novo</button>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Clientes cadastrados</h2>
+    <div id="lista-loading">Carregando...</div>
+    <table id="tabela" class="hidden">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Ativo</th>
+          <th>Boleto (antes/depois)</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+
+  <script>
+    const API = '/api/v1/clientes';
+    const form = document.getElementById('form');
+    const msg = document.getElementById('msg');
+    const tbody = document.getElementById('tbody');
+    const tabela = document.getElementById('tabela');
+    const listaLoading = document.getElementById('lista-loading');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnCancelar = document.getElementById('btnCancelar');
+
+    function showMsg(text, isError = false) {
+      msg.textContent = text;
+      msg.className = 'msg ' + (isError ? 'error' : 'success');
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 4000);
+    }
+
+    function parseArray(str) {
+      if (!str || !str.trim()) return [];
+      return str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    function getFormData() {
+      return {
+        nome: document.getElementById('nome').value.trim(),
+        ativo: document.getElementById('ativo').checked,
+        token_erp: document.getElementById('token_erp').value.trim(),
+        token_chat: document.getElementById('token_chat').value.trim(),
+        token_canal: document.getElementById('token_canal').value.trim(),
+        perfil_sistema: document.getElementById('perfil_sistema').value,
+        base_url: document.getElementById('base_url').value.trim() || 'https://api.hinova.com.br/api/sga/v2',
+        configuracoes_boleto: {
+          dias_antes_vencimento: Number(document.getElementById('dias_antes_vencimento').value),
+          dias_depois_vencimento: Number(document.getElementById('dias_depois_vencimento').value),
+          situacoes_envio_direto: parseArray(document.getElementById('situacoes_envio_direto').value),
+          situacoes_com_checagem_vencimento: parseArray(document.getElementById('situacoes_com_checagem').value),
+          dias_checagem_vencimento: Number(document.getElementById('dias_checagem_vencimento').value)
+        },
+        configuracoes_respostas: {
+          response_sucesso: document.getElementById('response_sucesso').value.trim(),
+          response_regularizacao_moto: document.getElementById('response_regularizacao_moto').value.trim(),
+          response_regularizacao_veiculo: document.getElementById('response_regularizacao_veiculo').value.trim(),
+          response_boleto_baixado: document.getElementById('response_boleto_baixado').value.trim()
+        },
+        configuracoes_revistoria: {
+          enviar_midia: document.getElementById('enviar_midia').checked,
+          video_moto: document.getElementById('video_moto').value.trim() || null,
+          video_carro: document.getElementById('video_carro').value.trim() || null
+        }
+      };
+    }
+
+    function setFormData(data) {
+      if (!data) return;
+      document.getElementById('nome').value = data.nome ?? '';
+      document.getElementById('ativo').checked = data.ativo ?? true;
+      document.getElementById('token_erp').value = data.token_erp ?? '';
+      document.getElementById('token_chat').value = data.token_chat ?? '';
+      document.getElementById('token_canal').value = data.token_canal ?? '';
+      document.getElementById('perfil_sistema').value = data.perfil_sistema ?? 'SGA';
+      document.getElementById('base_url').value = data.base_url ?? 'https://api.hinova.com.br/api/sga/v2';
+
+      const b = data.configuracoes_boleto ?? {};
+      document.getElementById('dias_antes_vencimento').value = b.dias_antes_vencimento ?? 30;
+      document.getElementById('dias_depois_vencimento').value = b.dias_depois_vencimento ?? 20;
+      document.getElementById('situacoes_envio_direto').value = Array.isArray(b.situacoes_envio_direto) ? b.situacoes_envio_direto.join('\n') : (b.situacoes_envio_direto ?? 'ATIVO');
+      document.getElementById('situacoes_com_checagem').value = Array.isArray(b.situacoes_com_checagem_vencimento) ? b.situacoes_com_checagem_vencimento.join('\n') : (b.situacoes_com_checagem_vencimento ?? 'INADIMPLENTE');
+      document.getElementById('dias_checagem_vencimento').value = b.dias_checagem_vencimento ?? 5;
+
+      const r = data.configuracoes_respostas ?? {};
+      document.getElementById('response_sucesso').value = r.response_sucesso ?? '';
+      document.getElementById('response_regularizacao_moto').value = r.response_regularizacao_moto ?? '';
+      document.getElementById('response_regularizacao_veiculo').value = r.response_regularizacao_veiculo ?? '';
+      document.getElementById('response_boleto_baixado').value = r.response_boleto_baixado ?? '';
+
+      const v = data.configuracoes_revistoria ?? {};
+      document.getElementById('enviar_midia').checked = v.enviar_midia ?? false;
+      document.getElementById('video_moto').value = v.video_moto ?? '';
+      document.getElementById('video_carro').value = v.video_carro ?? '';
+    }
+
+    function clearForm() {
+      form.dataset.editId = '';
+      setEditMode(false);
+      setFormData({
+        nome: '',
+        ativo: true,
+        token_erp: '',
+        token_chat: '',
+        token_canal: '',
+        perfil_sistema: 'SGA',
+        base_url: 'https://api.hinova.com.br/api/sga/v2',
+        configuracoes_boleto: { dias_antes_vencimento: 30, dias_depois_vencimento: 20, situacoes_envio_direto: ['ATIVO'], situacoes_com_checagem_vencimento: ['INADIMPLENTE'], dias_checagem_vencimento: 5 },
+        configuracoes_respostas: {
+          response_sucesso: 'Boleto e pix enviados! Data: {{data_vencimento}}, Valor: {{valor_boleto}}',
+          response_regularizacao_moto: 'Estamos enviando o vídeo modelo para regularização.',
+          response_regularizacao_veiculo: 'Estamos enviando o vídeo modelo para regularização.',
+          response_boleto_baixado: 'Boleto já foi baixado.'
+        },
+        configuracoes_revistoria: { enviar_midia: false, video_moto: null, video_carro: null }
+      });
+    }
+
+    async function loadClientes() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao carregar');
+        renderLista(data);
+      } catch (e) {
+        showMsg('Erro: ' + (e.message || e), true);
+        tbody.innerHTML = '<tr><td colspan="4">Erro ao carregar lista.</td></tr>';
+      } finally {
+        listaLoading.classList.add('hidden');
+        tabela.classList.remove('hidden');
+      }
+    }
+
+    function renderLista(clientes) {
+      tbody.innerHTML = clientes.map(cl => {
+        const cfg = cl.configuracoes_boleto;
+        const dias = cfg ? `${cfg.dias_antes_vencimento}/${cfg.dias_depois_vencimento}` : '-';
+        return `<tr>
+          <td>${escapeHtml(cl.nome)}</td>
+          <td>${cl.ativo ? 'Sim' : 'Não'}</td>
+          <td>${dias}</td>
+          <td><button type="button" class="secondary" data-id="${cl.id}">Editar</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>';
+
+      tbody.querySelectorAll('[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => editarCliente(btn.dataset.id));
+      });
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    const editModeFields = ['nome', 'ativo', 'token_erp', 'token_chat', 'token_canal', 'perfil_sistema', 'base_url'];
+
+    function setEditMode(isEdit) {
+      editModeFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = isEdit;
+      });
+      btnSubmit.textContent = isEdit ? 'Salvar alterações' : 'Cadastrar';
+    }
+
+    async function editarCliente(id) {
+      try {
+        const res = await fetch(`${API}/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Cliente não encontrado');
+        form.dataset.editId = id;
+        setEditMode(true);
+        setFormData(data);
+      } catch (e) {
+        showMsg('Erro: ' + (e.message || e), true);
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const editId = form.dataset.editId;
+      const body = getFormData();
+
+      if (editId) {
+        const patch = {
+          configuracoes_boleto: body.configuracoes_boleto,
+          configuracoes_respostas: body.configuracoes_respostas,
+          configuracoes_revistoria: body.configuracoes_revistoria
+        };
+        const res = await fetch(`${API}/${editId}/configuracoes`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showMsg('Erro: ' + (data.error || data.issues?.[0]?.message || 'Falha ao salvar'), true);
+          return;
+        }
+        showMsg('Configurações atualizadas com sucesso.');
+      } else {
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showMsg('Erro: ' + (data.error || data.issues?.[0]?.message || 'Falha ao cadastrar'), true);
+          return;
+        }
+        showMsg('Cliente cadastrado com sucesso.');
+        clearForm();
+      }
+      loadClientes();
+    });
+
+    btnCancelar.addEventListener('click', () => {
+      clearForm();
+    });
+
+    clearForm();
+    loadClientes();
+  </script>
+</body>
+</html>
