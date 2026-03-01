@@ -6,35 +6,126 @@
   <title>MCP Financeiro - Admin Clientes</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .subtitle { color: #666; margin-bottom: 1.5rem; }
-    section { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
-    section h2 { margin-top: 0; font-size: 1rem; }
-    .form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
-    .form-row label { min-width: 160px; }
-    input[type="text"], input[type="url"], input[type="number"], textarea, select { flex: 1; min-width: 200px; padding: 0.4rem; }
-    textarea { min-height: 60px; resize: vertical; }
-    .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
-    button { padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; }
-    button.primary { background: #0066cc; color: white; border: none; }
-    button.secondary { background: #eee; border: 1px solid #ccc; }
-    button:hover { opacity: 0.9; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f0f0f0; }
-    .msg { padding: 0.5rem; margin-bottom: 1rem; border-radius: 4px; }
-    .msg.success { background: #d4edda; color: #155724; }
-    .msg.error { background: #f8d7da; color: #721c24; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem;
+      background: #f0f2f5;
+      color: #1a1d21;
+      line-height: 1.5;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+      color: #fff;
+      padding: 1.5rem 1.5rem 1.75rem;
+      margin: 0 -1.5rem 1.5rem;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+    .header .subtitle { margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.9rem; }
+    section {
+      margin-bottom: 1.5rem;
+      padding: 1.25rem 1.5rem;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #e8eaed;
+    }
+    section h2 {
+      margin: 0 0 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1e3a5f;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e8eaed;
+    }
+    section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #374151;
+      margin: 1.25rem 0 0.75rem;
+    }
+    .form-row { display: flex; gap: 1rem; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: flex-start; }
+    .form-row label { min-width: 170px; padding-top: 0.45rem; font-weight: 500; color: #374151; }
+    input[type="text"], input[type="url"], input[type="number"], textarea, select {
+      flex: 1;
+      min-width: 220px;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #2d5a87;
+      box-shadow: 0 0 0 3px rgba(45,90,135,0.15);
+    }
+    input:disabled, textarea:disabled, select:disabled { background: #f3f4f6; color: #6b7280; }
+    textarea { min-height: 64px; resize: vertical; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+    button {
+      padding: 0.55rem 1.1rem;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.15s, transform 0.05s;
+    }
+    button.primary { background: #1e3a5f; color: #fff; border: none; }
+    button.primary:hover { background: #2d5a87; }
+    button.secondary { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+    button.secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+    button:active { transform: scale(0.98); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid #e8eaed; }
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr:last-child td { border-bottom: none; }
+    .msg {
+      padding: 0.65rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .msg.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .msg.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .hidden { display: none; }
-    .id-cell { font-family: monospace; font-size: 0.8em; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-    [type="checkbox"] { width: auto; min-width: auto; }
+    .id-cell {
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.75rem;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #6b7280;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .badge-ok { background: #d1fae5; color: #065f46; }
+    .badge-no { background: #fee2e2; color: #991b1b; }
+    #lista-loading { color: #6b7280; font-size: 0.9rem; }
+    [type="checkbox"] { width: auto; min-width: auto; accent-color: #1e3a5f; }
     label.checkbox { display: flex; align-items: center; gap: 0.5rem; }
   </style>
 </head>
 <body>
-  <h1>MCP Financeiro</h1>
-  <p class="subtitle">Cadastro e consulta de clientes</p>
+  <header class="header">
+    <h1>MCP Financeiro</h1>
+    <p class="subtitle">Cadastro e consulta de clientes</p>
+  </header>
 
   <div id="msg" class="msg hidden"></div>
 
@@ -73,7 +164,7 @@
         <input type="url" id="base_url" placeholder="https://api.hinova.com.br/api/sga/v2" value="https://api.hinova.com.br/api/sga/v2">
       </div>
 
-      <h3 style="margin-top: 1.5rem;">Configurações Boleto</h3>
+      <h3>Configurações Boleto</h3>
       <div class="form-row">
         <label for="dias_antes_vencimento">Dias antes vencimento *</label>
         <input type="number" id="dias_antes_vencimento" min="0" max="60" value="30" required>
@@ -95,7 +186,7 @@
         <input type="number" id="dias_checagem_vencimento" min="0" value="5" required>
       </div>
 
-      <h3 style="margin-top: 1.5rem;">Mensagens de Resposta</h3>
+      <h3>Mensagens de Resposta</h3>
       <div class="form-row">
         <label for="response_sucesso">Sucesso (boleto enviado) *</label>
         <textarea id="response_sucesso" required placeholder="Use {{data_vencimento}} e {{valor_boleto}}">Boleto e pix enviados! Data: {{data_vencimento}}, Valor: {{valor_boleto}}</textarea>
@@ -113,7 +204,7 @@
         <input type="text" id="response_boleto_baixado" required value="Boleto já foi baixado.">
       </div>
 
-      <h3 style="margin-top: 1.5rem;">Revistoria</h3>
+      <h3>Revistoria</h3>
       <div class="form-row">
         <label for="enviar_midia">Enviar vídeo</label>
         <label class="checkbox"><input type="checkbox" id="enviar_midia"> Enviar vídeo de regularização</label>
@@ -140,6 +231,7 @@
     <table id="tabela" class="hidden">
       <thead>
         <tr>
+          <th>ID</th>
           <th>Nome</th>
           <th>Ativo</th>
           <th>Boleto (antes/depois)</th>
@@ -261,7 +353,7 @@
         renderLista(data);
       } catch (e) {
         showMsg('Erro: ' + (e.message || e), true);
-        tbody.innerHTML = '<tr><td colspan="4">Erro ao carregar lista.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">Erro ao carregar lista.</td></tr>';
       } finally {
         listaLoading.classList.add('hidden');
         tabela.classList.remove('hidden');
@@ -272,13 +364,16 @@
       tbody.innerHTML = clientes.map(cl => {
         const cfg = cl.configuracoes_boleto;
         const dias = cfg ? `${cfg.dias_antes_vencimento}/${cfg.dias_depois_vencimento}` : '-';
+        const ativoClass = cl.ativo ? 'badge-ok' : 'badge-no';
+        const ativoText = cl.ativo ? 'Sim' : 'Não';
         return `<tr>
+          <td class="id-cell" title="${escapeHtml(cl.id)}">${escapeHtml(cl.id)}</td>
           <td>${escapeHtml(cl.nome)}</td>
-          <td>${cl.ativo ? 'Sim' : 'Não'}</td>
+          <td><span class="badge ${ativoClass}">${ativoText}</span></td>
           <td>${dias}</td>
           <td><button type="button" class="secondary" data-id="${cl.id}">Editar</button></td>
         </tr>`;
-      }).join('') || '<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>';
+      }).join('') || '<tr><td colspan="5">Nenhum cliente cadastrado.</td></tr>';
 
       tbody.querySelectorAll('[data-id]').forEach(btn => {
         btn.addEventListener('click', () => editarCliente(btn.dataset.id));
