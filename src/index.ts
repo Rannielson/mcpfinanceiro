@@ -11,6 +11,7 @@ import { logger } from "hono/logger";
 import { config } from "./config.js";
 import { clientesRoutes } from "./routes/clientes.js";
 import { webhookRoutes } from "./routes/webhook.js";
+import { webhookV2Routes } from "./routes/webhook-v2.js";
 
 const app = new Hono();
 
@@ -19,6 +20,7 @@ app.use("*", cors());
 
 app.route("/api/v1/clientes", clientesRoutes);
 app.route("/api/v1", webhookRoutes);
+app.route("/api/v2", webhookV2Routes);
 
 app.get("/", (c) => c.json({ status: "ok", service: "mcpfinanceiro" }));
 

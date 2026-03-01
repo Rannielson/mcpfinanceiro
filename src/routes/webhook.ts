@@ -20,12 +20,12 @@ webhookRoutes.post(
       );
     }
 
-    const message = await processarBoleto({
+    const result = await processarBoleto({
       placa: body.placa,
       telefone: body.telefone,
       client_id: String(clientId),
     });
 
-    return c.json({ message });
+    return c.json({ message: result.message });
   }
 );

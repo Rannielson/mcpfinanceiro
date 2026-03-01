@@ -136,14 +136,16 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
   };
 }
 
+export type BoletoResult = { message: string; responseKey: "boleto_ativo" | "boleto_fora" };
+
 export async function processarBoleto(params: {
   placa: string;
   telefone: string;
   client_id: string;
-}): Promise<string> {
+}): Promise<BoletoResult> {
   const cliente = await getClienteComConfigs(params.client_id);
   if (!cliente || !cliente.ativo) {
-    return "Cliente não encontrado ou inativo.";
+    return { message: "Cliente não encontrado ou inativo.", responseKey: "boleto_fora" };
   }
 
   const sga = new SGAClient({
@@ -176,7 +178,7 @@ export async function processarBoleto(params: {
       data_vencimento_final: dataVencimentoFinal,
     });
   } catch (e) {
-    return `Erro ao buscar boleto: ${e instanceof Error ? e.message : String(e)}`;
+    return { message: `Erro ao buscar boleto: ${e instanceof Error ? e.message : String(e)}`, responseKey: "boleto_fora" };
   }
 
   if (boletos.length > 0) {
@@ -195,11 +197,11 @@ export async function processarBoleto(params: {
   try {
     veiculos = await sga.buscarVeiculo(params.placa);
   } catch (e) {
-    return `Erro ao buscar veículo: ${e instanceof Error ? e.message : String(e)}`;
+    return { message: `Erro ao buscar veículo: ${e instanceof Error ? e.message : String(e)}`, responseKey: "boleto_fora" };
   }
 
   if (veiculos.length === 0) {
-    return "Veículo não encontrado.";
+    return { message: "Veículo não encontrado.", responseKey: "boleto_fora" };
   }
 
   return processarVeiculoSemBoleto(
@@ -244,15 +246,15 @@ function processarBoletoEncontrado(
   telefone: string,
   cliente: ClienteComConfigs,
   atomos: AtomosClient
-): string {
+): BoletoResult {
   if (boleto.situacao_boleto === "BAIXADO") {
-    return cliente.configuracoes_respostas.response_boleto_baixado;
+    return { message: cliente.configuracoes_respostas.response_boleto_baixado, responseKey: "boleto_fora" };
   }
 
   if (boleto.situacao_boleto !== "ABERTO") {
     const codigoFipe = boleto.veiculos?.[0]?.codigo_fipe;
     enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
-    return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
+    return { message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas), responseKey: "boleto_fora" };
   }
 
   const situacoesEnvioDireto =
@@ -271,11 +273,11 @@ function processarBoletoEncontrado(
     const limite = cliente.configuracoes_boleto.dias_checagem_vencimento ?? 2;
     if (diasAposVenc > limite) {
       enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
-      return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
+      return { message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas), responseKey: "boleto_fora" };
     }
   } else if (!envioDireto) {
     enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
-    return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
+    return { message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas), responseKey: "boleto_fora" };
   }
 
   const pixText =
@@ -290,10 +292,13 @@ function processarBoletoEncontrado(
   }
 
   const template = cliente.configuracoes_respostas.response_sucesso;
-  return replaceTemplate(template, {
-    data_vencimento: boleto.data_vencimento,
-    valor_boleto: boleto.valor_boleto,
-  });
+  return {
+    message: replaceTemplate(template, {
+      data_vencimento: boleto.data_vencimento,
+      valor_boleto: boleto.valor_boleto,
+    }),
+    responseKey: "boleto_ativo",
+  };
 }
 
 function processarVeiculoSemBoleto(
@@ -301,7 +306,7 @@ function processarVeiculoSemBoleto(
   telefone: string,
   cliente: ClienteComConfigs,
   atomos: AtomosClient
-): string {
+): BoletoResult {
   const situacoesEnvioDireto =
     cliente.configuracoes_boleto.situacoes_envio_direto ?? ["ATIVO"];
   const situacoesComChecagem =
@@ -322,5 +327,5 @@ function processarVeiculoSemBoleto(
     }
   }
 
-  return getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas);
+  return { message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas), responseKey: "boleto_fora" };
 }
