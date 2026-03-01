@@ -28,8 +28,11 @@ webhookV2Routes.post(
       client_id: clientId,
     });
 
+    const message =
+      result.responseKey === "boleto_fora" ? "boleto_fora" : result.message;
+
     return c.json({
-      message: result.message,
+      message,
       response: result.responseKey,
     });
   }
