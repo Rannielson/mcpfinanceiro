@@ -136,7 +136,7 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
   };
 }
 
-export type BoletoResult = { message: string; responseKey: "boleto_ativo" | "boleto_fora" };
+export type BoletoResult = { message: string; responseKey: "boleto_ativo" | "boleto_fora" | "boleto_baixado" | "cliente_inativo" };
 
 export async function processarBoleto(params: {
   placa: string;
@@ -145,7 +145,7 @@ export async function processarBoleto(params: {
 }): Promise<BoletoResult> {
   const cliente = await getClienteComConfigs(params.client_id);
   if (!cliente || !cliente.ativo) {
-    return { message: "Cliente não encontrado ou inativo.", responseKey: "boleto_fora" };
+    return { message: "Cliente não encontrado ou inativo.", responseKey: "cliente_inativo" };
   }
 
   const sga = new SGAClient({
@@ -248,7 +248,11 @@ function processarBoletoEncontrado(
   atomos: AtomosClient
 ): BoletoResult {
   if (boleto.situacao_boleto === "BAIXADO") {
-    return { message: cliente.configuracoes_respostas.response_boleto_baixado, responseKey: "boleto_fora" };
+    const linkBoleto = boleto.link_boleto ?? boleto.short_link ?? "";
+    if (linkBoleto) {
+      atomos.sendPdf(telefone, linkBoleto).catch(() => {});
+    }
+    return { message: cliente.configuracoes_respostas.response_boleto_baixado, responseKey: "boleto_baixado" };
   }
 
   if (boleto.situacao_boleto !== "ABERTO") {

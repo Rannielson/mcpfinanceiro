@@ -29,7 +29,7 @@ webhookV2Routes.post(
     });
 
     const message =
-      result.responseKey === "boleto_fora" ? "boleto_fora" : result.message;
+      result.responseKey === "cliente_inativo" ? result.responseKey : result.message;
 
     return c.json({
       message,
