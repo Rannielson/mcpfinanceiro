@@ -194,6 +194,14 @@ export async function processarBoleto(params: {
       data_vencimento_final: dataVencimentoFinal,
     });
   } catch (e) {
+    if (cliente.perfil_sistema === "SGA/SOUTH") {
+      return processarBoletoSouth({
+        placa: params.placa,
+        telefone: params.telefone,
+        cliente,
+        atomos,
+      });
+    }
     return { message: `Erro ao buscar boleto: ${e instanceof Error ? e.message : String(e)}`, responseKey: "boleto_fora" };
   }
 
@@ -367,9 +375,16 @@ async function processarBoletoSouth(params: {
 }): Promise<BoletoResult> {
   const { placa, telefone, cliente, atomos } = params;
 
+  if (!cliente.base_url_south || !cliente.token_erp_south) {
+    return {
+      message: "Configuração South incompleta (base_url_south ou token_erp_south ausente).",
+      responseKey: "boleto_fora",
+    };
+  }
+
   const south = new SouthClient({
-    baseUrl: cliente.base_url_south!,
-    tokenErp: cliente.token_erp_south!,
+    baseUrl: cliente.base_url_south,
+    tokenErp: cliente.token_erp_south,
   });
 
   let associadoResponse;
