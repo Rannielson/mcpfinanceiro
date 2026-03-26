@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase.js";
 import type { SGABoleto, SGAVeiculoBuscar } from "./sga-client.js";
 import { SGAClient } from "./sga-client.js";
 import { AtomosClient } from "./atomos-client.js";
+import { SouthClient } from "./south-client.js";
 
 function isMotocicleta(codigoFipe: string | null | undefined): boolean {
   return Boolean(codigoFipe?.trim().startsWith("81"));
@@ -58,6 +59,9 @@ export interface ClienteComConfigs {
   token_chat: string;
   token_canal: string;
   base_url: string;
+  perfil_sistema: "SGA" | "SOUTH" | "SGA/SOUTH";
+  token_erp_south: string | null;
+  base_url_south: string | null;
   configuracoes_boleto: {
     dias_antes_vencimento: number;
     dias_depois_vencimento: number;
@@ -115,6 +119,9 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
     token_chat: cliente.token_chat,
     token_canal: cliente.token_canal,
     base_url: cliente.base_url ?? "https://api.hinova.com.br/api/sga/v2",
+    perfil_sistema: cliente.perfil_sistema ?? "SGA",
+    token_erp_south: cliente.token_erp_south ?? null,
+    base_url_south: cliente.base_url_south ?? null,
     configuracoes_boleto: {
       dias_antes_vencimento: cfgBoleto.dias_antes_vencimento,
       dias_depois_vencimento: cfgBoleto.dias_depois_vencimento,
@@ -136,7 +143,7 @@ async function getClienteComConfigs(clientId: string): Promise<ClienteComConfigs
   };
 }
 
-export type BoletoResult = { message: string; responseKey: "boleto_ativo" | "boleto_fora" | "boleto_baixado" | "cliente_inativo" };
+export type BoletoResult = { message: string; responseKey: "boleto_ativo" | "boleto_fora" | "boleto_baixado" | "cliente_inativo" | "placa_nao_localizada" };
 
 export async function processarBoleto(params: {
   placa: string;
@@ -148,14 +155,23 @@ export async function processarBoleto(params: {
     return { message: "Cliente não encontrado ou inativo.", responseKey: "cliente_inativo" };
   }
 
-  const sga = new SGAClient({
-    baseUrl: cliente.base_url,
-    tokenErp: cliente.token_erp,
-  });
-
   const atomos = new AtomosClient({
     tokenChat: cliente.token_chat,
     tokenCanal: cliente.token_canal,
+  });
+
+  if (cliente.perfil_sistema === "SOUTH") {
+    return processarBoletoSouth({
+      placa: params.placa,
+      telefone: params.telefone,
+      cliente,
+      atomos,
+    });
+  }
+
+  const sga = new SGAClient({
+    baseUrl: cliente.base_url,
+    tokenErp: cliente.token_erp,
   });
 
   const hoje = new Date();
@@ -191,6 +207,15 @@ export async function processarBoleto(params: {
       cliente,
       atomos
     );
+  }
+
+  if (cliente.perfil_sistema === "SGA/SOUTH") {
+    return processarBoletoSouth({
+      placa: params.placa,
+      telefone: params.telefone,
+      cliente,
+      atomos,
+    });
   }
 
   let veiculos: SGAVeiculoBuscar[] = [];
@@ -332,4 +357,75 @@ function processarVeiculoSemBoleto(
   }
 
   return { message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas), responseKey: "boleto_fora" };
+}
+
+async function processarBoletoSouth(params: {
+  placa: string;
+  telefone: string;
+  cliente: ClienteComConfigs;
+  atomos: AtomosClient;
+}): Promise<BoletoResult> {
+  const { placa, telefone, cliente, atomos } = params;
+
+  const south = new SouthClient({
+    baseUrl: cliente.base_url_south!,
+    tokenErp: cliente.token_erp_south!,
+  });
+
+  let associadoResponse;
+  try {
+    associadoResponse = await south.buscarAssociado(placa);
+  } catch (e) {
+    return {
+      message: `Erro ao buscar associado South: ${e instanceof Error ? e.message : String(e)}`,
+      responseKey: "boleto_fora",
+    };
+  }
+
+  if (!associadoResponse.data.Existe) {
+    return { message: "Placa não localizada.", responseKey: "placa_nao_localizada" };
+  }
+
+  if (!associadoResponse.data.Ativo) {
+    const codigoFipe = associadoResponse.data.Dados?.VendasCarrosCodigoFipe;
+    enviarVideoRegularizacaoSeConfigurado(telefone, codigoFipe, cliente, atomos);
+    return {
+      message: getResponseRegularizacao(codigoFipe, cliente.configuracoes_respostas),
+      responseKey: "boleto_fora",
+    };
+  }
+
+  const documento = associadoResponse.data.Dados?.ClientesIndividuosDocumento;
+  if (!documento) {
+    return { message: "Documento do associado não encontrado.", responseKey: "boleto_fora" };
+  }
+
+  let boletoResponse;
+  try {
+    boletoResponse = await south.buscarBoleto(placa, documento);
+  } catch (e) {
+    return {
+      message: `Erro ao buscar boleto South: ${e instanceof Error ? e.message : String(e)}`,
+      responseKey: "boleto_fora",
+    };
+  }
+
+  const urlBoleto = boletoResponse.data.UrlBoleto;
+  const pixCopiaCola = boletoResponse.data.Faturasemv;
+
+  if (urlBoleto) {
+    atomos.sendPdf(telefone, urlBoleto).catch(() => {});
+  }
+  if (pixCopiaCola) {
+    atomos.sendPix(telefone, pixCopiaCola).catch(() => {});
+  }
+
+  const template = cliente.configuracoes_respostas.response_sucesso;
+  return {
+    message: replaceTemplate(template, {
+      data_vencimento: boletoResponse.data.FaturasDataVencimento,
+      valor_boleto: boletoResponse.data.FaturasValor,
+    }),
+    responseKey: "boleto_ativo",
+  };
 }
