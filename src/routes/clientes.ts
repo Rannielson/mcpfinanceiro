@@ -93,11 +93,13 @@ clientesRoutes.post(
       .insert({
         nome: body.nome,
         ativo: body.ativo,
-        token_erp: body.token_erp,
+        token_erp: body.token_erp ?? null,
         token_chat: body.token_chat,
         token_canal: body.token_canal,
         perfil_sistema: body.perfil_sistema,
-        base_url: body.base_url,
+        base_url: body.base_url ?? null,
+        token_erp_south: body.token_erp_south ?? null,
+        base_url_south: body.base_url_south ?? null,
       })
       .select("id")
       .single();
@@ -196,6 +198,17 @@ clientesRoutes.patch(
         .from("configuracoes_revistoria")
         .update(body.configuracoes_revistoria)
         .eq("cliente_id", id);
+      if (error) return c.json({ error: error.message }, 400);
+    }
+
+    if (body.token_erp_south !== undefined || body.base_url_south !== undefined) {
+      const updates: Record<string, string> = {};
+      if (body.token_erp_south !== undefined) updates.token_erp_south = body.token_erp_south;
+      if (body.base_url_south !== undefined) updates.base_url_south = body.base_url_south;
+      const { error } = await supabase
+        .from("clientes")
+        .update(updates)
+        .eq("id", id);
       if (error) return c.json({ error: error.message }, 400);
     }
 
