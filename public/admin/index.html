@@ -157,11 +157,28 @@
         <select id="perfil_sistema">
           <option value="SGA">SGA</option>
           <option value="SOUTH">SOUTH</option>
+          <option value="SGA/SOUTH">SGA/SOUTH</option>
         </select>
       </div>
-      <div class="form-row">
-        <label for="base_url">Base URL SGA</label>
-        <input type="url" id="base_url" placeholder="https://api.hinova.com.br/api/sga/v2" value="https://api.hinova.com.br/api/sga/v2">
+
+      <div id="sga-fields">
+        <h3>SGA</h3>
+        <div class="form-row">
+          <label for="base_url">Base URL SGA</label>
+          <input type="url" id="base_url" placeholder="https://api.hinova.com.br/api/sga/v2" value="https://api.hinova.com.br/api/sga/v2">
+        </div>
+      </div>
+
+      <div id="south-fields" class="hidden">
+        <h3>South</h3>
+        <div class="form-row">
+          <label for="token_erp_south">Token ERP (South) *</label>
+          <input type="text" id="token_erp_south" placeholder="Token API South">
+        </div>
+        <div class="form-row">
+          <label for="base_url_south">Base URL South *</label>
+          <input type="url" id="base_url_south" placeholder="https://api.autovaleprevencoes.org">
+        </div>
       </div>
 
       <h3>Configurações Boleto</h3>
@@ -233,6 +250,7 @@
         <tr>
           <th>ID</th>
           <th>Nome</th>
+          <th>Perfil</th>
           <th>Ativo</th>
           <th>Boleto (antes/depois)</th>
           <th>Ações</th>
@@ -264,14 +282,34 @@
       return str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     }
 
+    function togglePerfilFields() {
+      const perfil = document.getElementById('perfil_sistema').value;
+      const sgaFields = document.getElementById('sga-fields');
+      const southFields = document.getElementById('south-fields');
+      const tokenErp = document.getElementById('token_erp');
+
+      const hasSGA = perfil === 'SGA' || perfil === 'SGA/SOUTH';
+      const hasSOUTH = perfil === 'SOUTH' || perfil === 'SGA/SOUTH';
+
+      sgaFields.classList.toggle('hidden', !hasSGA);
+      southFields.classList.toggle('hidden', !hasSOUTH);
+
+      tokenErp.required = hasSGA;
+      document.getElementById('token_erp_south').required = hasSOUTH;
+      document.getElementById('base_url_south').required = hasSOUTH;
+    }
+
+    document.getElementById('perfil_sistema').addEventListener('change', togglePerfilFields);
+
     function getFormData() {
-      return {
+      const perfil = document.getElementById('perfil_sistema').value;
+      const data = {
         nome: document.getElementById('nome').value.trim(),
         ativo: document.getElementById('ativo').checked,
-        token_erp: document.getElementById('token_erp').value.trim(),
+        token_erp: document.getElementById('token_erp').value.trim() || undefined,
         token_chat: document.getElementById('token_chat').value.trim(),
         token_canal: document.getElementById('token_canal').value.trim(),
-        perfil_sistema: document.getElementById('perfil_sistema').value,
+        perfil_sistema: perfil,
         base_url: document.getElementById('base_url').value.trim() || 'https://api.hinova.com.br/api/sga/v2',
         configuracoes_boleto: {
           dias_antes_vencimento: Number(document.getElementById('dias_antes_vencimento').value),
@@ -292,6 +330,13 @@
           video_carro: document.getElementById('video_carro').value.trim() || null
         }
       };
+
+      if (perfil === 'SOUTH' || perfil === 'SGA/SOUTH') {
+        data.token_erp_south = document.getElementById('token_erp_south').value.trim();
+        data.base_url_south = document.getElementById('base_url_south').value.trim();
+      }
+
+      return data;
     }
 
     function setFormData(data) {
@@ -303,6 +348,9 @@
       document.getElementById('token_canal').value = data.token_canal ?? '';
       document.getElementById('perfil_sistema').value = data.perfil_sistema ?? 'SGA';
       document.getElementById('base_url').value = data.base_url ?? 'https://api.hinova.com.br/api/sga/v2';
+      document.getElementById('token_erp_south').value = data.token_erp_south ?? '';
+      document.getElementById('base_url_south').value = data.base_url_south ?? '';
+      togglePerfilFields();
 
       const b = data.configuracoes_boleto ?? {};
       document.getElementById('dias_antes_vencimento').value = b.dias_antes_vencimento ?? 30;
@@ -334,6 +382,8 @@
         token_canal: '',
         perfil_sistema: 'SGA',
         base_url: 'https://api.hinova.com.br/api/sga/v2',
+        token_erp_south: '',
+        base_url_south: '',
         configuracoes_boleto: { dias_antes_vencimento: 30, dias_depois_vencimento: 20, situacoes_envio_direto: ['ATIVO'], situacoes_com_checagem_vencimento: ['INADIMPLENTE'], dias_checagem_vencimento: 5 },
         configuracoes_respostas: {
           response_sucesso: 'Boleto e pix enviados! Data: {{data_vencimento}}, Valor: {{valor_boleto}}',
@@ -353,7 +403,7 @@
         renderLista(data);
       } catch (e) {
         showMsg('Erro: ' + (e.message || e), true);
-        tbody.innerHTML = '<tr><td colspan="5">Erro ao carregar lista.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Erro ao carregar lista.</td></tr>';
       } finally {
         listaLoading.classList.add('hidden');
         tabela.classList.remove('hidden');
@@ -369,11 +419,12 @@
         return `<tr>
           <td class="id-cell" title="${escapeHtml(cl.id)}">${escapeHtml(cl.id)}</td>
           <td>${escapeHtml(cl.nome)}</td>
+          <td>${escapeHtml(cl.perfil_sistema || 'SGA')}</td>
           <td><span class="badge ${ativoClass}">${ativoText}</span></td>
           <td>${dias}</td>
           <td><button type="button" class="secondary" data-id="${cl.id}">Editar</button></td>
         </tr>`;
-      }).join('') || '<tr><td colspan="5">Nenhum cliente cadastrado.</td></tr>';
+      }).join('') || '<tr><td colspan="6">Nenhum cliente cadastrado.</td></tr>';
 
       tbody.querySelectorAll('[data-id]').forEach(btn => {
         btn.addEventListener('click', () => editarCliente(btn.dataset.id));
@@ -386,7 +437,7 @@
       return d.innerHTML;
     }
 
-    const editModeFields = ['nome', 'ativo', 'token_erp', 'token_chat', 'token_canal', 'perfil_sistema', 'base_url'];
+    const editModeFields = ['nome', 'ativo', 'token_erp', 'token_chat', 'token_canal', 'perfil_sistema', 'base_url', 'token_erp_south', 'base_url_south'];
 
     function setEditMode(isEdit) {
       editModeFields.forEach(id => {
@@ -453,6 +504,7 @@
     });
 
     clearForm();
+    togglePerfilFields();
     loadClientes();
   </script>
 </body>
